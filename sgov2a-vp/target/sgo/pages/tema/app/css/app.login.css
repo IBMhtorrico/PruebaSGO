@@ -1,0 +1,58 @@
+.login-page{
+	background: url('../imagen/fondo.login.jpg') no-repeat center center;
+	background-color: black;
+}
+
+.login-logo a, .register-logo a {
+    color: #ffffff;
+    text-shadow: 0px 2px 3px #555;
+}
+
+.login-logo a, .register-logo a {
+	color: #fff;
+	text-shadow: 0px 1px 0px #999, 0px 2px 0px #888, 0px 3px 0px #777, 0px 4px 0px #666, 0px 5px 0px #555, 0px 6px 0px #444, 0px 7px 0px #333, 0px 8px 7px #001135;
+}
+
+.login-box, .register-box {
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 300px;
+    width: 400px;
+}
+
+.login-logo, .register-logo {
+    color: #b8860b;
+    font-size: 30px;
+    font-weight: 300;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.login-box-body, .register-box-body {
+    background: #fff none repeat scroll 0 0;
+    border-top: 0 none;
+    color: #666;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 20px;
+    width: 240px;
+}
+
+.login-box-body, .register-box-body {
+    /*background: #fff none repeat scroll 0 0;*/
+    background-color:rgba(0,0,0,0);
+}
+
+.login-box, .register-box {
+    background-color:rgba(0,0,0,0.7);
+    border-radius: 10px 10px 10px 10px;
+-moz-border-radius: 10px 10px 10px 10px;
+-webkit-border-radius: 10px 10px 10px 10px;
+border: 0px solid #000000;
+}
+
+.login-box-msg, .register-box-msg {
+    color: white;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset;
+    font-size:14px;
+}

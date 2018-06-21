@@ -1,0 +1,27 @@
+package sgo.seguridad;
+
+import java.util.logging.Logger;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import nl.captcha.Captcha;
+
+import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
+
+public class ValidateCaptchaInterceptor extends HandlerInterceptorAdapter {
+
+  // private static final Logger logger = Logger.getLogger(ValidateCaptchaInterceptor.class);
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object command){
+        boolean isHuman = true;
+        if(request.getRequestURL().toString().indexOf("login") != -1){
+           // basicExample basicExample = (BasicExample)command;
+            // validate the Captcha to check we're not dealing with a bot
+          //  Captcha captcha = Captcha.load(request, "basicExampleCaptcha");
+          // isHuman = captcha.validate(request,basicExample.getCaptchaCodeTextBox());
+        }
+        return isHuman;
+    }
+}

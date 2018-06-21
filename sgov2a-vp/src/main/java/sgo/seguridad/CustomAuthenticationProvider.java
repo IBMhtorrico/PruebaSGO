@@ -1,0 +1,150 @@
+package sgo.seguridad;
+import java.sql.Date;
+import java.util.ArrayList;
+import java.util.Collection;
+
+import nl.captcha.Captcha;
+
+import org.apache.poi.hssf.record.formula.functions.Days360;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
+import sgo.datos.DiaOperativoDao;
+import sgo.datos.EnlaceDao;
+import sgo.datos.ParametroDao;
+import sgo.datos.UsuarioDao;
+import sgo.entidad.Parametro;
+import sgo.entidad.ParametrosListar;
+import sgo.entidad.Respuesta;
+import sgo.entidad.RespuestaCompuesta;
+import sgo.entidad.Usuario;
+import sgo.utilidades.Utilidades;
+
+
+
+
+import org.springframework.web.context.request.RequestContextHolder;//FIXME
+import org.springframework.web.context.request.RequestAttributes ; //FIXME
+import org.springframework.web.context.request.ServletRequestAttributes; //FIXME
+import org.springframework.web.servlet.ModelAndView;
+
+import javax.servlet.http.HttpServletRequest; //FIXME
+import javax.servlet.http.HttpSession;
+
+@Component
+public class CustomAuthenticationProvider implements AuthenticationProvider {
+	@Autowired
+	private UsuarioDao dUsuario;
+	@Autowired
+	private ParametroDao dParametro;
+	@Autowired
+	private DiaOperativoDao dDiaOperativo;
+	@Autowired
+	private UserDetailsServiceImpl userService;
+    public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+    	GestorDirectorio gestorDirectorio=null;
+        String nombreUsuario = authentication.getName();
+        String clave = authentication.getCredentials().toString();
+        String claveEncriptada ="";
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        claveEncriptada = passwordEncoder.encode(clave);
+        RespuestaCompuesta respuesta = null;
+        ParametrosListar parametros= null;
+        int intentos = 0;
+        //***REQ 3 - SAR STIC-STI-0004-2017***
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        HttpServletRequest request = requestAttributes!=null ?((ServletRequestAttributes) requestAttributes).getRequest():null;
+        //INI REQ 9000002341
+        HttpSession session = request.getSession();
+        session.setAttribute("UsuarioLogueado",nombreUsuario);
+        session.setAttribute("ClaveIngresada",clave);
+        System.out.println("nombreUsuario : " +nombreUsuario );
+        System.out.println("claveIngresada : " +clave );
+        //FIN REQ 9000002341        
+        String valorCaptcha = request!=null?(String) request.getParameter("captcha"):null;
+		String captcha=request!=null? ((Captcha)request.getSession().getAttribute(Captcha.NAME)).getAnswer():null;
+		
+        if(captcha==null || (captcha!=null && !captcha.equals(valorCaptcha))){
+        	throw new BadCredentialsException("El código Captcha es incorrecto.");
+        }        
+        //***REQ 3 - SAR STIC-STI-0004-2017***
+        
+        AuthenticatedUserDetails usuario =  (AuthenticatedUserDetails) userService.loadUserByUsername(nombreUsuario);
+        gestorDirectorio = new GestorDirectorio();
+        
+        if (usuario == null) {
+            throw new BadCredentialsException("Usuario o clave incorrecto.");
+        }
+        
+    	/*Date fActual = Utilidades.convierteStringADate(dDiaOperativo.recuperarFechaActual().valor, "yyyy-MM-dd");
+    	int dias = (int) ((fActual.getTime() - usuario.getActualizacionClave().getTime()) / (1000 * 60 * 60 * 24));
+
+    	parametros = new ParametrosListar();
+    	parametros.setFiltroParametro(Parametro.ALIAS_MAX_CAMBIO_CLAVE);
+    	respuesta = dParametro.recuperarRegistros(parametros); 
+    	Parametro eParametro = (Parametro) respuesta.contenido.carga.get(0);
+    	
+    	if(dias >= Integer.parseInt(eParametro.getValor())){
+    		throw new BadCredentialsException("Su contraseña ha expirado, favor contacte con su administrador.");
+    	}
+        
+    	intentos = usuario.getIntentos();
+    	
+    	parametros = new ParametrosListar();
+    	parametros.setFiltroParametro(Parametro.ALIAS_INTENTOS_INVALIDOS);
+    	respuesta = dParametro.recuperarRegistros(parametros); 
+    	eParametro = (Parametro) respuesta.contenido.carga.get(0);
+    	
+    	if(intentos == Integer.parseInt(eParametro.getValor())){
+    		throw new BadCredentialsException("Ha superado los intentos permitidos, favor contacte con su administrador.");
+    	}*/
+
+        if(usuario.getEstado() == 2){
+       		throw new BadCredentialsException("El usuario se encuentra inactivo, favor contacte con su administrador.");
+        }
+        
+
+        if( usuario.getTipo() == 1){
+        	//tipo de usuario INTERNO
+        	System.out.println("Es usuario interno");
+        	boolean resp = gestorDirectorio.validarLogueo(nombreUsuario, clave);
+        	if (!resp){
+        		intentos = intentos + 1;
+        		Usuario eUsuario = new Usuario();
+        		eUsuario.setId(usuario.getID());
+        		eUsuario.setIntentos(intentos);
+
+        		respuesta = dUsuario.actualizarIntentos(eUsuario);
+        		throw new BadCredentialsException("Usuario o clave incorrecto");
+        	}
+        } else {
+        	//tipo de usuario EXTERNO
+        	System.out.println("Es usuario externo");
+        	if (!passwordEncoder.matches(clave, usuario.getPassword())) {
+        		intentos = intentos + 1;
+        		Usuario eUsuario = new Usuario();
+        		eUsuario.setId(usuario.getID());
+        		eUsuario.setIntentos(intentos);
+        		respuesta = dUsuario.actualizarIntentos(eUsuario);
+
+        		throw new BadCredentialsException("Usuario o clave incorrecto");
+        	}
+        }
+         //Boolean gf= gestorDirectorio.validarUsuario("acabeza", clave);
+        return new UsernamePasswordAuthenticationToken(usuario, clave, usuario.getAuthorities());
+    }
+
+    public boolean supports(Class<?> authentication) {
+        return authentication.equals(UsernamePasswordAuthenticationToken.class);
+    }
+}
